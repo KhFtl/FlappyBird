@@ -1,4 +1,6 @@
-﻿using System;
+﻿using FlappyBird.Services;
+using FlappyBird.Services.IServices;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
@@ -10,16 +12,16 @@ using System.Windows.Forms;
 
 namespace FlappyBird
 {
-    //------------------------
-    public partial class Form1 : Form
+    public partial class GameForm : Form
     {
         Player bird;
         Tube tube1;
         Tube tube2;
         float gravity;
         int score;
-        const int tubeSpeed = 50;
-        public Form1()
+        IRecordToFile _recordToFile;
+        UserInfo _userInfo;
+        public GameForm()
         {
             InitializeComponent();
             Init();
@@ -34,6 +36,9 @@ namespace FlappyBird
             timer1.Start();
             gravity = 0;
             score = 0;
+            _recordToFile = Settings.GetCurrentServiceRecord();
+            _userInfo = new UserInfo();
+            _userInfo.StartGame = DateTime.Now;
         }
 
         private void Form1_Paint(object sender, PaintEventArgs e)
@@ -47,7 +52,7 @@ namespace FlappyBird
             graphics.DrawImage(tube2.tubeImage, tube2.x, tube2.y, tube2.sizeX, tube2.sizeY);
 
             Font f = new Font("Verdana",14,FontStyle.Bold);
-            graphics.DrawString($"Score: {score}", f, Brushes.Black, 0, 0);
+            graphics.DrawString($"Tab - Show Results\nScore: {score}", f, Brushes.Black, 0, 0);
         }
         private void CreateTube()
         {
@@ -65,8 +70,8 @@ namespace FlappyBird
 
         private void MoveTubes()
         {
-            tube1.x -= (score + tubeSpeed);
-            tube2.x -= (score + tubeSpeed);
+            tube1.x -= (score + Settings.TubeSpeed);
+            tube2.x -= (score + Settings.TubeSpeed);
             CreateTube();
         }
 
@@ -77,6 +82,7 @@ namespace FlappyBird
                 bird.isAlive = false;
                 timer1.Stop();
                 MessageBox.Show($"Game Over! Your score: {score}");
+                SaveResult();
                 Init();
             }
             if (Collide(bird, tube1) || Collide(bird, tube2))
@@ -84,6 +90,7 @@ namespace FlappyBird
                 bird.isAlive = false;
                 timer1.Stop();
                 MessageBox.Show($"Game Over! Your score: {score}");
+                SaveResult();
                 Init();
             }
 
@@ -99,6 +106,15 @@ namespace FlappyBird
 
         private void Form1_KeyDown(object sender, KeyEventArgs e)
         {
+            if (e.KeyCode == Keys.Tab)
+            {
+                timer1.Stop();
+                RecordsForm recFrm = new RecordsForm();
+                if (DialogResult.OK == recFrm.ShowDialog())
+                {
+                    timer1.Start();
+                }
+            }
             if (bird.isAlive)
             {
                 if (e.KeyCode == Keys.Space)
@@ -132,5 +148,18 @@ namespace FlappyBird
         private void Form1_Resize(object sender, EventArgs e)
         {
         }
+
+        private void SaveResult()
+        {
+            UserInfoForm usrFrm = new UserInfoForm();
+            if (usrFrm.ShowDialog() == DialogResult.OK)
+            {
+                _userInfo.Name = usrFrm.Name;
+                _userInfo.EndGame = DateTime.Now;
+                _userInfo.Score = score;
+                _recordToFile.WriteRecord(_userInfo, score);
+            }
+        }
+
     }
 }
